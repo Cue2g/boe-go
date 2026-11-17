@@ -1,0 +1,40 @@
+{{define "content"}}
+{{$p := .D.Preset}}
+<p class="small"><a href="/admin/jobs">← Jobs</a></p>
+<h1>{{sourceLabel .D.Job.Name}} <span class="muted small">({{.D.Job.Name}})</span></h1>
+<div class="grid2">
+<form class="panel stack" method="post" action="/admin/jobs/{{.D.Job.Name}}">
+  {{template "csrf" .CSRF}}
+  <h2 class="first">Programación</h2>
+  <div class="field checks"><label><input type="checkbox" name="enabled" value="1" {{if .D.Job.Enabled}}checked{{end}}> <strong>Ejecutar automáticamente</strong></label></div>
+  <div class="radio-cards">
+    <label><input type="radio" name="kind" value="daily" {{if eq $p.Kind "daily"}}checked{{end}}> Todos los días a las
+      <input type="time" name="daily_time" value="{{if eq $p.Kind "daily"}}{{$p.Time}}{{else}}05:00{{end}}" class="auto"></label>
+    <label><input type="radio" name="kind" value="hours" {{if eq $p.Kind "hours"}}checked{{end}}> Cada
+      <input type="number" name="every" min="1" max="23" value="{{$p.Every}}" class="auto w70"> horas</label>
+    <label><input type="radio" name="kind" value="weekdays" {{if eq $p.Kind "weekdays"}}checked{{end}}> Ciertos días a las
+      <input type="time" name="weekdays_time" value="{{if eq $p.Kind "weekdays"}}{{$p.Time}}{{else}}05:00{{end}}" class="auto">
+      <div class="checks days">{{range $i, $n := .D.DayNames}}<label><input type="checkbox" name="days" value="{{$i}}" {{if hasInt $p.Days $i}}checked{{end}}> {{$n}}</label>{{end}}</div></label>
+    <label><input type="radio" name="kind" value="custom" {{if eq $p.Kind "custom"}}checked{{end}}> Expresión cron (avanzado)
+      <input type="text" name="cron" value="{{if eq $p.Kind "custom"}}{{$p.Cron}}{{end}}" placeholder="min hora día mes día_semana, ej. */30 * * * *"></label>
+  </div>
+  <p class="small muted">Hora de España ({{.D.TZ}}). Actual: <code>{{.D.Job.Schedule}}</code>{{if not .D.Next.IsZero}} · próxima: {{fmtTime .D.Next}}{{end}}</p>
+  <button type="submit">Guardar</button>
+</form>
+<div class="panel">
+  <h2 class="first">Ejecución manual</h2>
+  <div id="jobrun">{{template "job_run" .D}}</div>
+</div>
+</div>
+<h2>Historial</h2>
+<div class="panel" hx-get="/admin/runs/tabla?source={{.D.Job.Name}}" hx-trigger="every 5s" hx-swap="innerHTML">{{template "runs_table" .D.Runs}}</div>
+{{end}}
+
+{{define "job_run"}}
+{{if .Running}}<p><span class="badge run">Ejecutándose…</span></p>
+{{else}}<div class="actions">
+  <form hx-post="/admin/jobs/{{.Job.Name}}/ejecutar?view=detail" hx-target="#jobrun" hx-swap="innerHTML"><button>Ejecutar ahora</button></form>
+  <form hx-post="/admin/jobs/{{.Job.Name}}/ejecutar?view=detail&full=1" hx-target="#jobrun" hx-swap="innerHTML" hx-confirm="¿Descargar de nuevo el detalle de todas las subastas?"><button class="secondary">Ejecución completa</button></form>
+</div>
+<p class="small muted">Se ejecuta en segundo plano y guarda a medida que descarga. “Ejecutar ahora” solo pide el detalle de las subastas nuevas o que cambiaron de estado (y de las que llevan más de 7 días sin actualizar); “completa” lo pide de todas.</p>{{end}}
+{{end}}

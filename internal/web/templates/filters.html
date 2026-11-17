@@ -1,0 +1,35 @@
+{{define "content"}}
+<div class="page-head"><h1>Mis filtros y alertas</h1><a class="btn sm" href="/app/subastas" hx-boost="true">+ Nuevo filtro</a></div>
+{{if .D.Filters}}
+<div class="flist">
+  {{range .D.Filters}}
+  <article class="fcard">
+    <h3>{{.Name}}</h3>
+    <div class="crit">{{.Criteria.Summary}}</div>
+    <div class="alert">
+      <span class="ico{{if eq .AlertMode "none"}} off{{end}}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>{{if eq .AlertMode "none"}}<path d="M3 3l18 18"/>{{end}}</svg></span>
+      <div>
+        <div>{{alertDesc .}}</div>
+        <div class="small muted">Última alerta:
+          {{if .LastAlertAt}}{{fmtTime .LastAlertAt}}{{if .LastSentError}} <span class="badge err" title="{{.LastSentError}}">error de envío</span>{{else if .LastSentItems}} · {{.LastSentItems}} subastas{{end}}{{else}}—{{end}}</div>
+      </div>
+    </div>
+    <div class="actions">
+      <a class="btn sm" href="/app/subastas?{{qs .Criteria}}&filter_id={{.ID}}">Ver subastas</a>
+      <a class="btn secondary sm" href="/app/filtros/{{.ID}}/editar">Alerta</a>
+      {{if ne .AlertMode "none"}}
+      <form class="inline" method="post" action="/app/filtros/{{.ID}}/probar">{{template "csrf" $.CSRF}}<button class="ghost sm">Enviar prueba</button></form>
+      {{end}}
+      <form class="inline" method="post" action="/app/filtros/{{.ID}}/borrar" onsubmit="return confirm('¿Borrar el filtro “{{.Name}}”?')">{{template "csrf" $.CSRF}}<button class="danger sm">Borrar</button></form>
+    </div>
+  </article>
+  {{end}}
+</div>
+{{else}}
+<div class="panel empty">
+  <div class="big"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+  <p>Aún no tienes filtros. Ve a <strong>Subastas</strong>, ajusta los filtros y pulsa “Guardar como alerta”.</p>
+  <a class="btn" href="/app/subastas">Ir a Subastas</a>
+</div>
+{{end}}
+{{end}}

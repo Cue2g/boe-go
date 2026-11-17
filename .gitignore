@@ -1,0 +1,6 @@
+/data/
+/dump/
+/sboe
+*.db
+*.db-*
+.env

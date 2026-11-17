@@ -1,0 +1,32 @@
+{{define "content"}}
+{{$f := .D.F}}
+<h1>{{if $f.ID}}Editar filtro{{else}}Nuevo filtro{{end}}</h1>
+<form method="post" action="{{if $f.ID}}/app/filtros/{{$f.ID}}{{else}}/app/filtros{{end}}" class="stack">
+  {{template "csrf" .CSRF}}
+  <input type="hidden" name="criteria_qs" value="{{.D.CriteriaQS}}">
+  <div class="grid2">
+    <div class="panel">
+      <div class="field"><label for="name">Nombre</label><input id="name" type="text" name="name" value="{{$f.Name}}" required maxlength="100" placeholder="Pisos baratos en Barcelona"></div>
+      <div class="field"><label>Criterios</label><div class="crit">{{$f.Criteria.Summary}}</div>
+        <div class="small" style="margin-top:10px">coinciden ahora <strong>{{.D.Matches}}</strong> subastas · <a href="/app/subastas?{{.D.CriteriaQS}}{{if $f.ID}}&filter_id={{$f.ID}}{{end}}">Cambiar criterios</a></div></div>
+    </div>
+    <div class="panel">
+      <div class="field"><label>Alerta por email</label>
+        <div class="radio-cards">
+          <label><input type="radio" name="alert_mode" value="none" {{if eq $f.AlertMode "none"}}checked{{end}}><span><strong>Sin alerta</strong><span class="small muted" style="display:block">Solo guardar el filtro.</span></span></label>
+          <label><input type="radio" name="alert_mode" value="on_run" {{if eq $f.AlertMode "on_run"}}checked{{end}}><span><strong>Cuando corran los jobs</strong><span class="small muted" style="display:block">Al terminar cada actualización, si hay subastas nuevas que cumplen el filtro.</span></span></label>
+          <label><input type="radio" name="alert_mode" value="daily" {{if eq $f.AlertMode "daily"}}checked{{end}}><span><strong>Una vez al día</strong><span class="small muted" style="display:block">Resumen de las subastas nuevas desde la alerta anterior (hora de España).</span></span></label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="t">Hora (alerta diaria)</label><input id="t" type="time" name="alert_time" value="{{or $f.AlertTime "08:00"}}"></div>
+        <div class="field"><label for="em">Enviar a</label><input id="em" type="email" name="alert_email" value="{{or $f.AlertEmail .User.Email}}"></div>
+      </div>
+    </div>
+  </div>
+  <div class="actions form-actions">
+    <button type="submit">Guardar</button>
+    <a class="btn ghost" href="/app/filtros">Cancelar</a>
+  </div>
+</form>
+{{end}}

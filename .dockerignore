@@ -1,0 +1,10 @@
+.git
+.env
+data/
+dump/
+sboe
+*.db
+*.db-*
+compose.yaml
+Dockerfile
+.dockerignore

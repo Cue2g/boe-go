@@ -1,0 +1,15 @@
+services:
+  sboe:
+    build: .
+    image: sboe-go
+    container_name: sboe
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Prevalecen sobre .env: rutas y puerto dentro del contenedor
+      SBOE_DB_PATH: /data/sboe.db
+      SBOE_ADDR: ":8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data

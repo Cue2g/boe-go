@@ -1,0 +1,14 @@
+{{define "content"}}
+<div class="login">
+  <div class="brand"><span class="logo">S</span>SBOE</div>
+  <div class="panel">
+    <h1>Iniciar sesión</h1>
+    <form class="stack" method="post" action="/login">
+      <input type="hidden" name="next" value="{{.D.Next}}">
+      <div class="field"><label for="email">Email</label><input id="email" type="email" name="email" value="{{.D.Email}}" required autofocus autocomplete="username"></div>
+      <div class="field"><label for="pw">Contraseña</label><input id="pw" type="password" name="password" required autocomplete="current-password"></div>
+      <button type="submit" class="block">Entrar</button>
+    </form>
+  </div>
+</div>
+{{end}}

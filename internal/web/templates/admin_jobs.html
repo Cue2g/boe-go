@@ -1,0 +1,53 @@
+{{define "content"}}
+<h1>Jobs</h1>
+<div class="cards">
+  {{range .D.Jobs}}<div class="card"><div class="small muted">{{sourceLabel .Name}}</div><div class="n">{{index $.D.Stats .Name}}</div><div class="small muted">subastas activas</div></div>{{end}}
+</div>
+<div id="jobs" hx-get="/admin/jobs/tabla" hx-trigger="every 5s" hx-swap="innerHTML">{{template "jobs_table" .}}</div>
+<h2>Últimas ejecuciones</h2>
+<div class="panel" hx-get="/admin/runs/tabla" hx-trigger="every 5s" hx-swap="innerHTML">{{template "runs_table" .D.Runs}}</div>
+{{end}}
+
+{{define "jobs_table"}}
+<div class="panel"><div class="table-wrap">
+<table class="data stack">
+  <thead><tr><th>Job</th><th>Horario</th><th>Próxima ejecución</th><th>Última ejecución</th><th></th></tr></thead>
+  <tbody>
+  {{range .D.Jobs}}
+    <tr>
+      <td class="lead"><strong>{{sourceLabel .Name}}</strong><div class="small muted">{{.Name}}</div></td>
+      <td data-label="Horario">{{if .Enabled}}<span class="badge ok">Activo</span>{{else}}<span class="badge">Pausado</span>{{end}} <span class="small">{{describeCron .Schedule}}</span></td>
+      <td class="small" data-label="Próxima">{{if .Next.IsZero}}<span class="muted">—</span>{{else}}{{fmtTime .Next}}{{end}}</td>
+      <td class="small" data-label="Última">{{if .Running}}<span class="badge run">Ejecutándose…</span>{{else if .Last.ID}}{{template "run_status" .Last}} {{fmtTime .Last.StartedAt}}<div class="muted">{{.Last.Items}} subastas, {{.Last.NewItems}} nuevas · {{.Last.Duration}}</div>{{else}}<span class="muted">nunca</span>{{end}}</td>
+      <td class="row-actions"><div class="actions">
+        <form class="inline" hx-post="/admin/jobs/{{.Name}}/ejecutar" hx-target="#jobs" hx-swap="innerHTML"><button class="sm" {{if .Running}}disabled{{end}} title="Solo descarga el detalle de lo nuevo o cambiado">Ejecutar ahora</button></form>
+        <form class="inline" hx-post="/admin/jobs/{{.Name}}/ejecutar?full=1" hx-target="#jobs" hx-swap="innerHTML" hx-confirm="La ejecución completa vuelve a descargar el detalle de todas las subastas y tarda bastante más. ¿Continuar?"><button class="secondary sm" {{if .Running}}disabled{{end}}>Completa</button></form>
+        <a class="btn secondary sm" href="/admin/jobs/{{.Name}}">Configurar</a>
+      </div></td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+</div></div>
+{{end}}
+
+{{define "run_status"}}{{if eq .Status "ok"}}<span class="badge ok">OK</span>{{else if eq .Status "running"}}<span class="badge run">En curso</span>{{else}}<span class="badge err" title="{{.Error}}">Error</span>{{end}}{{end}}
+
+{{define "runs_table"}}
+<div class="table-wrap">
+<table class="data stack">
+  <thead><tr><th>Ejecución</th><th>Inicio</th><th>Duración</th><th>Estado</th><th class="num">Subastas</th><th class="num">Nuevas</th><th>Lanzado por</th></tr></thead>
+  <tbody>
+  {{range .}}
+    <tr>
+      <td class="lead"><span class="muted">#{{.ID}}</span> <strong>{{sourceLabel .Source}}</strong></td><td class="small" data-label="Inicio">{{fmtTime .StartedAt}}</td><td class="small" data-label="Duración">{{.Duration}}</td>
+      <td data-label="Estado">{{template "run_status" .}}{{if .Error}}<div class="small muted">{{.Error}}</div>{{end}}</td>
+      <td class="num" data-label="Subastas">{{.Items}}</td><td class="num" data-label="Nuevas">{{.NewItems}}</td>
+      <td class="small" data-label="Lanzado por">{{triggerLabel .TriggeredBy}}{{if .UserEmail}} · {{.UserEmail}}{{end}}</td>
+    </tr>
+  {{else}}<tr><td colspan="7" class="muted lead">Todavía no hay ejecuciones.</td></tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+{{end}}

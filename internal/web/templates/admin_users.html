@@ -1,0 +1,36 @@
+{{define "content"}}
+<h1>Usuarios</h1>
+<div class="grid2 wide-left">
+<div class="panel"><div class="table-wrap">
+  <table class="data stack">
+    <thead><tr><th>Email</th><th>Rol</th><th>Estado</th><th>Creado</th><th></th></tr></thead>
+    <tbody>
+    {{range .D.Users}}
+      <tr>
+        <td class="lead"><strong>{{.Email}}</strong>{{if eq .ID $.User.ID}} <span class="badge">tú</span>{{end}}</td>
+        <td data-label="Rol">{{if .IsAdmin}}<span class="badge blue">Admin</span>{{else}}<span class="badge">Usuario</span>{{end}}</td>
+        <td data-label="Estado">{{if .Active}}<span class="badge ok">Activo</span>{{else}}<span class="badge err">Desactivado</span>{{end}}</td>
+        <td class="small" data-label="Creado">{{fmtTime .CreatedAt}}</td>
+        <td class="row-actions">{{if ne .ID $.User.ID}}<div class="actions">
+          <form class="inline" method="post" action="/admin/usuarios/{{.ID}}/activo">{{template "csrf" $.CSRF}}<input type="hidden" name="active" value="{{if .Active}}0{{else}}1{{end}}"><button class="secondary sm">{{if .Active}}Desactivar{{else}}Activar{{end}}</button></form>
+          <form class="inline" method="post" action="/admin/usuarios/{{.ID}}/rol">{{template "csrf" $.CSRF}}<input type="hidden" name="role" value="{{if .IsAdmin}}user{{else}}admin{{end}}"><button class="secondary sm">{{if .IsAdmin}}Quitar admin{{else}}Hacer admin{{end}}</button></form>
+          <details class="inline-pw"><summary>Nueva contraseña</summary>
+            <form method="post" action="/admin/usuarios/{{.ID}}/password">{{template "csrf" $.CSRF}}<input type="text" name="password" minlength="8" required placeholder="mín. 8 caracteres"><button class="sm">Guardar</button></form>
+          </details>
+        </div>{{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div></div>
+<form class="panel stack" method="post" action="/admin/usuarios">
+  {{template "csrf" .CSRF}}
+  <h2 class="first">Nuevo usuario</h2>
+  <div class="field"><label>Email</label><input type="email" name="email" required></div>
+  <div class="field"><label>Contraseña inicial (mín. 8)</label><input type="text" name="password" required minlength="8"></div>
+  <div class="field"><label>Rol</label><select name="role"><option value="user">Usuario (platform)</option><option value="admin">Administrador</option></select></div>
+  <button type="submit">Crear usuario</button>
+  <p class="small muted">Comparte la contraseña con el usuario; puede cambiarla en “Mi cuenta”.</p>
+</form>
+</div>
+{{end}}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html><body style="margin:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;color:#222">
+<div style="max-width:720px;margin:0 auto;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden">
+  <div style="background:#1f3a5f;color:#fff;padding:18px 22px">
+    <div style="font-size:20px;font-weight:bold">{{.Count}} subasta{{if ne .Count 1}}s{{end}} nueva{{if ne .Count 1}}s{{end}}</div>
+    <div style="font-size:14px;opacity:.85;margin-top:4px">Filtro: {{.FilterName}}</div>
+  </div>
+  <div style="padding:18px 22px">
+    <p style="font-size:13px;color:#555;margin:0 0 14px">{{.Summary}}</p>
+    <table style="border-collapse:collapse;width:100%;font-size:13px">
+      <thead><tr style="background:#f0f2f5;text-align:left">
+        <th style="padding:7px;border:1px solid #ddd">ID</th>
+        <th style="padding:7px;border:1px solid #ddd">Fuente</th>
+        <th style="padding:7px;border:1px solid #ddd">Bien</th>
+        <th style="padding:7px;border:1px solid #ddd">Ubicación</th>
+        <th style="padding:7px;border:1px solid #ddd">Valor</th>
+        <th style="padding:7px;border:1px solid #ddd">Puja mín.</th>
+        <th style="padding:7px;border:1px solid #ddd">% recl.</th>
+        <th style="padding:7px;border:1px solid #ddd"></th>
+      </tr></thead>
+      <tbody>
+      {{range .Items}}
+        <tr>
+          <td style="padding:7px;border:1px solid #ddd;white-space:nowrap">{{.PublicID}}</td>
+          <td style="padding:7px;border:1px solid #ddd">{{sourceLabel .Source}}</td>
+          <td style="padding:7px;border:1px solid #ddd">{{subtypeLabel .AssetSubtype}}<div style="color:#777;font-size:11px">{{statusLabel .StatusCode}}</div></td>
+          <td style="padding:7px;border:1px solid #ddd">{{.Locality}}{{if and .Locality .Province}} · {{end}}{{.Province}}</td>
+          <td style="padding:7px;border:1px solid #ddd;white-space:nowrap">{{euros .ValuationCents}}</td>
+          <td style="padding:7px;border:1px solid #ddd;white-space:nowrap">{{euros .MinBidCents}}</td>
+          <td style="padding:7px;border:1px solid #ddd">{{pct .PctClaimedValuation}}</td>
+          <td style="padding:7px;border:1px solid #ddd"><a href="{{.URL}}" style="color:#1a6fd1">Ver</a></td>
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+    {{if .More}}<p style="font-size:13px;margin-top:12px">Y {{.More}} más. <a href="{{.PlatformURL}}">Ver todas en la plataforma</a>.</p>{{end}}
+    {{if .PlatformURL}}<p style="margin-top:18px"><a href="{{.PlatformURL}}" style="background:#1f3a5f;color:#fff;padding:9px 14px;border-radius:5px;text-decoration:none;font-size:14px">Abrir en la plataforma</a></p>{{end}}
+  </div>
+  <div style="background:#f8f9fa;color:#777;padding:10px 22px;font-size:11px">
+    Recibes este correo porque configuraste una alerta en el filtro “{{.FilterName}}”. Puedes desactivarla desde la plataforma.
+  </div>
+</div>
+</body></html>
