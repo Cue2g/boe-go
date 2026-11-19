@@ -62,7 +62,7 @@ const pageSize = 50
 
 // Version se muestra junto al logo. Se puede fijar al compilar con
 // -ldflags "-X sboe/internal/web.Version=1.1".
-var Version = "1.0.1"
+var Version = "1.0.2"
 
 // New construye el servidor.
 func New(d Deps) (*Server, error) {

@@ -3,6 +3,7 @@
 package filter
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/url"
@@ -20,7 +21,7 @@ type Criteria struct {
 	Sources       []string `json:"sources,omitempty"`
 	AssetTypes    []string `json:"asset_types,omitempty"`
 	Provinces     []string `json:"provinces,omitempty"`
-	Locality      string   `json:"locality,omitempty"`
+	Localities    []string `json:"localities,omitempty"` // basta con que coincida una
 	Text          string   `json:"text,omitempty"`
 	Subtypes      []string `json:"subtypes,omitempty"`
 	StatusCodes   []string `json:"status_codes,omitempty"`
@@ -36,6 +37,24 @@ type Criteria struct {
 	EndDateFrom   string   `json:"end_date_from,omitempty"` // YYYY-MM-DD
 	EndDateTo     string   `json:"end_date_to,omitempty"`
 	IncludeClosed bool     `json:"include_closed,omitempty"` // por defecto solo activas
+}
+
+// UnmarshalJSON acepta también los filtros guardados antes de poder elegir varias
+// localidades, que la guardaban como texto en "locality".
+func (c *Criteria) UnmarshalJSON(b []byte) error {
+	type plain Criteria
+	var aux struct {
+		plain
+		Locality string `json:"locality"`
+	}
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	*c = Criteria(aux.plain)
+	if l := strings.TrimSpace(aux.Locality); l != "" && !slices.Contains(c.Localities, l) {
+		c.Localities = append(c.Localities, l)
+	}
+	return nil
 }
 
 // Valores permitidos (los mismos que producen las fuentes y normalize.Enrich).
@@ -141,22 +160,16 @@ func Build(c Criteria) (string, []any) {
 			in("province_code", codes, nil, nil)
 		}
 	}
-	if v := normalize.Text(c.Locality); v != "" {
-		// lo escrito, tal cual…
-		cond := `norm(locality) LIKE ? ESCAPE '\'`
-		args := []any{"%" + escapeLike(v) + "%"}
-		if k, ok := normalize.LookupKnownLocality(c.Locality); ok {
-			// …y, si es una localidad del catálogo, cualquiera de sus nombres (Mahón = Maó),
-			// pero solo en su provincia (La Granada, Barcelona ≠ Granada)
-			var ors []string
-			for _, key := range k.Keys() {
-				ors = append(ors, `norm(locality) LIKE ? ESCAPE '\'`)
-				args = append(args, "%"+escapeLike(key)+"%")
-			}
-			args = append(args, k.ProvinceCode)
-			cond = "(" + cond + " OR ((" + strings.Join(ors, " OR ") + ") AND (province_code = ? OR province_code IS NULL)))"
+	var locConds []string
+	var locArgs []any
+	for _, l := range c.Localities {
+		if cond, a := localityCond(l); cond != "" {
+			locConds = append(locConds, cond)
+			locArgs = append(locArgs, a...)
 		}
-		add(cond, args...)
+	}
+	if len(locConds) > 0 {
+		add("("+strings.Join(locConds, " OR ")+")", locArgs...)
 	}
 	if m := rePublicID.FindStringSubmatch(c.Text); m != nil {
 		// búsqueda por ID público: SB-000123
@@ -200,6 +213,28 @@ func Build(c Criteria) (string, []any) {
 	return strings.Join(conds, " AND "), args
 }
 
+// localityCond: condición para una localidad. Coincide lo escrito, tal cual, y, si es una
+// localidad del catálogo, cualquiera de sus nombres (Mahón = Maó), pero solo en su
+// provincia (La Granada, Barcelona ≠ Granada).
+func localityCond(l string) (string, []any) {
+	v := normalize.Text(l)
+	if v == "" {
+		return "", nil
+	}
+	cond := `norm(locality) LIKE ? ESCAPE '\'`
+	args := []any{"%" + escapeLike(v) + "%"}
+	if k, ok := normalize.LookupKnownLocality(l); ok {
+		var ors []string
+		for _, key := range k.Keys() {
+			ors = append(ors, `norm(locality) LIKE ? ESCAPE '\'`)
+			args = append(args, "%"+escapeLike(key)+"%")
+		}
+		args = append(args, k.ProvinceCode)
+		cond = "(" + cond + " OR ((" + strings.Join(ors, " OR ") + ") AND (province_code = ? OR province_code IS NULL)))"
+	}
+	return cond, args
+}
+
 func escapeLike(s string) string {
 	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
@@ -237,7 +272,7 @@ func FromValues(v url.Values) Criteria {
 		Provinces:     ProvinceCodes(nonEmpty(v["province"])),
 		Subtypes:      nonEmpty(v["subtype"]),
 		StatusCodes:   nonEmpty(v["status_code"]),
-		Locality:      strings.TrimSpace(v.Get("locality")),
+		Localities:    nonEmpty(v["locality"]),
 		Text:          strings.TrimSpace(v.Get("q")),
 		Status:        strings.TrimSpace(v.Get("status")),
 		ValuationMin:  num(v.Get("valuation_min")),
@@ -276,6 +311,7 @@ func (c Criteria) Values() url.Values {
 	v["province"] = ProvinceCodes(c.Provinces)
 	v["subtype"] = c.Subtypes
 	v["status_code"] = c.StatusCodes
+	v["locality"] = c.Localities
 	set := func(k, s string) {
 		if s != "" {
 			v.Set(k, s)
@@ -286,7 +322,6 @@ func (c Criteria) Values() url.Values {
 			v.Set(k, strconv.FormatFloat(*f, 'f', -1, 64))
 		}
 	}
-	set("locality", c.Locality)
 	set("q", c.Text)
 	set("status", c.Status)
 	setNum("valuation_min", c.ValuationMin)
@@ -350,8 +385,10 @@ func (c Criteria) Summary() string {
 	if len(c.StatusCodes) > 0 {
 		parts = append(parts, "Estado: "+label(StatusLabel, c.StatusCodes))
 	}
-	if c.Locality != "" {
-		parts = append(parts, "Localidad contiene “"+c.Locality+"”")
+	if len(c.Localities) == 1 {
+		parts = append(parts, "Localidad contiene “"+c.Localities[0]+"”")
+	} else if len(c.Localities) > 1 {
+		parts = append(parts, "Localidad: "+strings.Join(c.Localities, ", "))
 	}
 	if c.Text != "" {
 		parts = append(parts, "Texto “"+c.Text+"”")

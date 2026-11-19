@@ -318,6 +318,8 @@ body.sheet-open .sheet-backdrop { opacity: 1; pointer-events: auto; }
 .prov-more { margin-top: 10px; font-size: 13px; }
 .prov-none { margin: 6px 0 0; }
 .prov-search { margin-bottom: 10px; }
+#loc-chips { margin-bottom: 8px; }
+#loc-chips:empty { display: none; }
 .prov-search input { min-height: 40px; font-size: 15px; border-radius: var(--pill); }
 
 /* rango mín/máx */

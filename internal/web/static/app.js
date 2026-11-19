@@ -128,6 +128,44 @@
     b.textContent = open ? 'Ver menos' : b.dataset.label;
   });
 
+  /* ---------- localidades (varias) ---------- */
+  // El cuadro de texto solo sirve para añadir: cada localidad elegida es un chip marcado
+  // (name="locality"); desmarcarlo la quita.
+  function locAdd(input) {
+    var v = input.value.trim(), box = $('#loc-chips');
+    input.value = '';
+    if (!v || !box) return;
+    var opt = $$('#loc-list option').filter(function (o) { return fold(o.value) === fold(v); })[0];
+    if (opt) v = opt.value;
+    var dup = $$('input[name="locality"]', box).filter(function (c) { return fold(c.value) === fold(v); })[0];
+    if (dup) { if (dup.checked) return; dup.checked = true; dup.dispatchEvent(new Event('change', { bubbles: true })); return; }
+    var lab = document.createElement('label'), cb = document.createElement('input'), sp = document.createElement('span');
+    lab.className = 'chip'; cb.type = 'checkbox'; cb.name = 'locality'; cb.value = v; cb.checked = true; sp.textContent = v;
+    lab.appendChild(cb); lab.appendChild(sp); box.appendChild(lab);
+    cb.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  var isLocOption = function (v) { return $$('#loc-list option').some(function (o) { return o.value === v; }); };
+  // Que escribir en el cuadro no dispare la búsqueda: solo cuenta al añadir el chip.
+  document.addEventListener('change', function (e) {
+    if (!e.target.matches('[data-loc-input]')) return;
+    e.stopPropagation(); locAdd(e.target);
+  }, true);
+  document.addEventListener('input', function (e) {
+    if (!e.target.matches('[data-loc-input]')) return;
+    e.stopPropagation();
+    // elegida de la lista de sugerencias: se añade sin esperar a Enter
+    if (e.inputType === 'insertReplacementText' || (!e.inputType && isLocOption(e.target.value))) locAdd(e.target);
+  }, true);
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || !e.target.matches('[data-loc-input]')) return;
+    e.preventDefault(); locAdd(e.target);
+  });
+  // Al desmarcar, el chip desaparece (la búsqueda ya se lanzó con el "change").
+  document.addEventListener('change', function (e) {
+    var c = e.target;
+    if (c.name === 'locality' && c.type === 'checkbox' && !c.checked) { var l = c.closest('label'); if (l) l.parentNode.removeChild(l); }
+  });
+
   /* ---------- contadores y chips de filtros activos ---------- */
   function fieldLabel(el) {
     if (el.name === 'q') return '';
@@ -148,7 +186,7 @@
       if (!el.name || el.name === 'sort' || el.name === 'filter_id' || el.disabled) return;
       var text;
       if (el.type === 'hidden') text = el.name === 'asset_type' ? 'Tipo: ' + el.value : el.name === 'status' ? 'Estado: ' + el.value : null;
-      else if (el.type === 'checkbox') text = el.checked ? (el.name === 'include_closed' ? 'Incluye no publicadas' : chipText(el)) : null;
+      else if (el.type === 'checkbox') text = el.checked ? (el.name === 'include_closed' ? 'Incluye no publicadas' : el.name === 'locality' ? 'Localidad: ' + el.value : chipText(el)) : null;
       else if (el.type === 'radio') text = el.checked && el.value !== '' ? 'Vivienda habitual: ' + chipText(el) : null;
       else if (el.value.trim() !== '') {
         var l = fieldLabel(el), v = el.value.trim();

@@ -2,6 +2,7 @@ package filter_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -64,7 +65,8 @@ func TestBuild(t *testing.T) {
 		{"todo", filter.Criteria{}, "1,2,3"},
 		{"tipo", filter.Criteria{AssetTypes: []string{"inmueble"}}, "1,3"},
 		{"provincia sin tildes ni mayúsculas", filter.Criteria{Provinces: []string{"barcelona"}}, "1,3"},
-		{"localidad con tilde", filter.Criteria{Locality: "mao"}, "2"},
+		{"localidad con tilde", filter.Criteria{Localities: []string{"mao"}}, "2"},
+		{"varias localidades", filter.Criteria{Localities: []string{"Maó", "badalona"}}, "2,3"},
 		{"texto", filter.Criteria{Text: "TERRAZA"}, "1"},
 		{"valor máx", filter.Criteria{ValuationMax: f64(10000)}, "2"},
 		{"pct reclamado", filter.Criteria{PctClaimedMax: f64(33)}, "1"},
@@ -105,5 +107,23 @@ func TestValuesRoundTrip(t *testing.T) {
 	}
 	if filter.FormatEuros(123456789) != "1.234.567,89 €" {
 		t.Error(filter.FormatEuros(123456789))
+	}
+}
+
+func TestUnmarshalLegacyLocality(t *testing.T) {
+	var c filter.Criteria
+	if err := json.Unmarshal([]byte(`{"locality":" Maó ","provinces":["07"]}`), &c); err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Localities) != 1 || c.Localities[0] != "Maó" || len(c.Provinces) != 1 {
+		t.Fatalf("criterios: %+v", c)
+	}
+	b, _ := json.Marshal(c)
+	if strings.Contains(string(b), `"locality"`) {
+		t.Fatalf("no debería volver a escribir locality: %s", b)
+	}
+	v := filter.Criteria{Localities: []string{"Maó", "Badalona"}}.Values()
+	if got := filter.FromValues(v).Localities; len(got) != 2 {
+		t.Fatalf("ida y vuelta por query string: %v", got)
 	}
 }
