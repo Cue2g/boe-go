@@ -1,10 +1,9 @@
 # Stack para Portainer (Stacks > Add stack > Web editor).
-# La imagen sboe-go:latest debe existir ya en el servidor (ver README, sección Portainer).
+# Usa la imagen cue2g/boe:latest de Docker Hub (ver README, sección Portainer).
 # Los valores ${...} se definen en "Environment variables" del stack.
 services:
   sboe:
-    image: sboe-go:latest
-    pull_policy: never
+    image: cue2g/boe:latest
     container_name: sboe
     restart: unless-stopped
     ports:
@@ -17,6 +16,8 @@ services:
       SBOE_TZ: ${SBOE_TZ:-Europe/Madrid}
       SBOE_MIN_DELAY: ${SBOE_MIN_DELAY:-1s}
       SBOE_MAX_DELAY: ${SBOE_MAX_DELAY:-3s}
+      SBOE_RESEND_API_KEY: ${SBOE_RESEND_API_KEY:-}
+      SBOE_RESEND_FROM: ${SBOE_RESEND_FROM:-}
       SBOE_SMTP_HOST: ${SBOE_SMTP_HOST:-}
       SBOE_SMTP_PORT: ${SBOE_SMTP_PORT:-587}
       SBOE_SMTP_USER: ${SBOE_SMTP_USER:-}

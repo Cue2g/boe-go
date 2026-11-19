@@ -20,7 +20,7 @@ type Config struct {
 	CookieSecure bool
 	Location     *time.Location
 
-	SMTP notify.SMTPConfig
+	Mail notify.Config
 }
 
 func Load() Config {
@@ -38,12 +38,18 @@ func Load() Config {
 		BaseURL:      env("SBOE_BASE_URL", "http://localhost:8080"),
 		CookieSecure: env("SBOE_COOKIE_SECURE", "") == "1" || env("SBOE_COOKIE_SECURE", "") == "true",
 		Location:     loc,
-		SMTP: notify.SMTPConfig{
-			Host: os.Getenv("SBOE_SMTP_HOST"),
-			Port: port,
-			User: os.Getenv("SBOE_SMTP_USER"),
-			Pass: os.Getenv("SBOE_SMTP_PASS"),
-			From: os.Getenv("SBOE_SMTP_FROM"),
+		Mail: notify.Config{
+			Resend: notify.ResendConfig{
+				APIKey: os.Getenv("SBOE_RESEND_API_KEY"),
+				From:   os.Getenv("SBOE_RESEND_FROM"),
+			},
+			SMTP: notify.SMTPConfig{
+				Host: os.Getenv("SBOE_SMTP_HOST"),
+				Port: port,
+				User: os.Getenv("SBOE_SMTP_USER"),
+				Pass: os.Getenv("SBOE_SMTP_PASS"),
+				From: os.Getenv("SBOE_SMTP_FROM"),
+			},
 		},
 	}
 }

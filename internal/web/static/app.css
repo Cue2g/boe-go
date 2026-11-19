@@ -89,6 +89,7 @@ header.top .inner { max-width: 1400px; margin: 0 auto; padding: 0 16px; display:
 .brand:hover { text-decoration: none; }
 .brand .logo { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: #2E322B;
   display: grid; place-items: center; font-size: 15px; font-weight: 900; }
+.brand .ver { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--chip); padding: 2px 7px; border-radius: var(--pill); letter-spacing: 0; }
 nav.main { display: none; gap: 2px; flex: 1; }
 nav.main a { padding: 7px 14px; border-radius: var(--pill); color: var(--muted); font-weight: 600; transition: background .15s, color .15s; }
 nav.main a:hover { background: var(--chip); color: var(--text); text-decoration: none; }
@@ -448,8 +449,30 @@ details.inline-pw form { margin-top: 6px; display: flex; gap: 6px; }
   .toasts { bottom: 24px; }
 }
 @media (min-width: 1024px) {
-  .explorer { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 22px; align-items: start; }
-  .explorer .toolbar { grid-column: 1 / -1; position: static; margin: 0; padding: 0; background: none; }
+  header.top .inner, main { max-width: 1680px; padding-left: 24px; padding-right: 24px; }
+  main { padding-top: 20px; }
+  /* filtros a la izquierda desde arriba; buscador y resultados a la derecha */
+  .explorer { display: grid; grid-template-columns: 290px minmax(0, 1fr); column-gap: 24px; align-items: start; }
+  .explorer .toolbar { grid-column: 2; grid-row: 1; position: static; margin: 0 0 12px; padding: 0; background: none; }
+  .explorer .sheet { grid-column: 1; grid-row: 1 / span 2; }
+  .explorer .results-col { grid-column: 2; grid-row: 2; }
+  /* total, orden, acciones y vista en una sola línea (sin tocar el HTML del móvil) */
+  .results-body { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 8px; }
+  .results-head, .sort-row { display: contents; }
+  .results-body > * { flex: 1 1 100%; order: 9; min-width: 0; }
+  .results-head .total { order: 1; margin-right: 6px; }
+  .sort-row select { order: 2; }
+  .sort-row .spacer { order: 3; flex: 1 1 0; }
+  .sort-row .btn { order: 4; }
+  .results-head .view-toggle { order: 5; }
+  .grid-tools { margin-bottom: -6px; }
+  .pager { margin-top: 8px; }
+  /* tarjetas más compactas: caben más columnas */
+  .alist, .skel-cards { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
+  .acard { padding: 14px; gap: 8px; }
+  .acard h3 { font-size: 16px; }
+  .stats div { padding: 6px 10px; }
+  .stats .main dd { font-size: 19px; }
   .filter-btn, .sheet-handle, .sheet-close, .sheet-backdrop, .sheet-foot { display: none !important; }
   /* Un único contenedor de scroll; al llegar al final, la rueda sigue con la página. */
   .sheet { position: sticky; top: calc(var(--header) + 16px); transform: none; visibility: visible; max-height: calc(100vh - var(--header) - 32px);
@@ -459,7 +482,13 @@ details.inline-pw form { margin-top: 6px; display: flex; gap: 6px; }
   .sheet-head h2 { font-size: 17px; }
   .sheet-body { overscroll-behavior: auto; scrollbar-gutter: stable; padding-right: 12px; }
   /* tabla: scroll propio con cabecera fija, alto de la ventana */
-  .grid-wrap { max-height: calc(100dvh - var(--header) - 150px); overflow: auto; overscroll-behavior: auto; }
+  .grid-wrap { max-height: calc(100dvh - var(--header) - 120px); overflow: auto; overscroll-behavior: auto; }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .view-toggle .lbl { display: none; }
+}
+@media (min-width: 1440px) {
+  .explorer { grid-template-columns: 320px minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {

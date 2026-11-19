@@ -16,7 +16,7 @@
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 {{if .User.ID}}
 <header class="top"><div class="inner">
-  <a class="brand" href="/app/subastas" hx-boost="true"><span class="logo">S</span>SBOE</a>
+  <a class="brand" href="/app/subastas" hx-boost="true"><span class="logo">S</span>SBOE<span class="ver">v{{version}}</span></a>
   <nav class="main" hx-boost="true">
     <a href="/app/subastas" {{if eq .Nav "subastas"}}class="on"{{end}}>Subastas</a>
     <a href="/app/filtros" {{if eq .Nav "filtros"}}class="on"{{end}}>Mis filtros y alertas</a>

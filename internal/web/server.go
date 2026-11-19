@@ -60,6 +60,10 @@ type Page struct {
 
 const pageSize = 50
 
+// Version se muestra junto al logo. Se puede fijar al compilar con
+// -ldflags "-X sboe/internal/web.Version=1.1".
+var Version = "1.0"
+
 // New construye el servidor.
 func New(d Deps) (*Server, error) {
 	s := &Server{Deps: d, pages: map[string]*template.Template{}, mux: http.NewServeMux()}
@@ -130,9 +134,10 @@ func (s *Server) funcs() template.FuncMap {
 			n := normalize.Text(v)
 			return slices.ContainsFunc(list, func(x string) bool { return normalize.Text(x) == n })
 		},
-		"asset": s.assetURL,
-		"seq":   func(n int) []int { return make([]int, n) },
-		"hasInt": func(list []int, v int) bool { return slices.Contains(list, v) },
+		"asset":   s.assetURL,
+		"version": func() string { return Version },
+		"seq":     func(n int) []int { return make([]int, n) },
+		"hasInt":  func(list []int, v int) bool { return slices.Contains(list, v) },
 		"numv": func(f *float64) string {
 			if f == nil {
 				return ""
@@ -242,7 +247,7 @@ var flashMessages = map[string]string{
 
 var errorMessages = map[string]string{
 	"sin_datos":  "El filtro no tiene subastas que enviar ahora mismo; prueba con otros criterios.",
-	"envio":      "No se pudo enviar el email. Revisa la configuración SMTP en el servidor.",
+	"envio":      "No se pudo enviar el email. Revisa la configuración de email (Resend/SMTP) en el servidor.",
 	"no_existe":  "No encontrado.",
 	"duplicado":  "Ya existe un usuario con ese email.",
 	"corriendo":  "Ese job ya se está ejecutando.",

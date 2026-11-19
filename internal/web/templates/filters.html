@@ -16,7 +16,7 @@
     </div>
     <div class="actions">
       <a class="btn sm" href="/app/subastas?{{qs .Criteria}}&filter_id={{.ID}}">Ver subastas</a>
-      <a class="btn secondary sm" href="/app/filtros/{{.ID}}/editar">Alerta</a>
+      <a class="btn secondary sm" href="/app/filtros/{{.ID}}/editar">Editar</a>
       {{if ne .AlertMode "none"}}
       <form class="inline" method="post" action="/app/filtros/{{.ID}}/probar">{{template "csrf" $.CSRF}}<button class="ghost sm">Enviar prueba</button></form>
       {{end}}

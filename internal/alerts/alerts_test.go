@@ -2,6 +2,9 @@ package alerts
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -102,5 +105,71 @@ func TestDailyOncePerDay(t *testing.T) {
 	svc.Daily(ctx, eight.AddDate(0, 0, 1))
 	if len(m.sent) != 1 {
 		t.Fatal("sin novedades no envía")
+	}
+}
+
+// TestResendEndToEnd: con Resend configurado, los tres envíos (al terminar un job,
+// diario y prueba desde la web) llegan a la API de Resend con remitente, destino y asunto.
+func TestResendEndToEnd(t *testing.T) {
+	type req struct {
+		From    string   `json:"from"`
+		To      []string `json:"to"`
+		Subject string   `json:"subject"`
+		HTML    string   `json:"html"`
+	}
+	var mu sync.Mutex
+	var got []req
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer re_test" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		var b req
+		json.NewDecoder(r.Body).Decode(&b)
+		mu.Lock()
+		got = append(got, b)
+		mu.Unlock()
+		w.Write([]byte(`{"id":"x"}`))
+	}))
+	defer srv.Close()
+
+	ctx := context.Background()
+	st, _, _, u := setup(t)
+	mailer := notify.New(notify.Config{Resend: notify.ResendConfig{
+		APIKey: "re_test", From: "Alertas SBOE <alertas@boe-service.site>", Endpoint: srv.URL,
+	}})
+	loc, _ := time.LoadLocation("Europe/Madrid")
+	svc := New(st, mailer, "http://x", loc)
+
+	onRun := store.Filter{UserID: u.ID, Name: "Al terminar", AlertMode: store.AlertOnRun, AlertEmail: "run@b.com"}
+	daily := store.Filter{UserID: u.ID, Name: "Diario", AlertMode: store.AlertDaily, AlertTime: "08:00", AlertEmail: "daily@b.com"}
+	for _, f := range []*store.Filter{&onRun, &daily} {
+		if err := st.SaveFilter(ctx, f); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t1 := time.Now().Add(time.Minute) // posterior a la creación de los filtros
+	st.Sync(ctx, "boe", []model.Auction{{ExternalID: "1", URL: "u", AssetType: "inmueble", ValuationCents: v(100)}}, t1)
+
+	svc.OnRun(ctx, "boe", t1)
+	at8 := time.Date(t1.Year(), t1.Month(), t1.Day(), 8, 0, 0, 0, loc).AddDate(0, 0, 1)
+	svc.Daily(ctx, at8)
+	if _, err := svc.SendTest(ctx, onRun); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(got) != 3 {
+		t.Fatalf("Resend recibió %d emails, want 3: %+v", len(got), got)
+	}
+	want := []struct{ to, subj string }{
+		{"run@b.com", "1 subasta nueva · Al terminar"},
+		{"daily@b.com", "1 subasta nueva · Diario"},
+		{"run@b.com", "[Prueba] 1 subasta nueva · Al terminar"},
+	}
+	for i, w := range want {
+		g := got[i]
+		if g.From != "Alertas SBOE <alertas@boe-service.site>" || len(g.To) != 1 || g.To[0] != w.to || g.Subject != w.subj || g.HTML == "" {
+			t.Errorf("email %d = %+v, want to=%s subject=%q", i, g, w.to, w.subj)
+		}
 	}
 }

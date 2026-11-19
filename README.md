@@ -125,7 +125,9 @@ Ver `.env.example`.
 | `SBOE_COOKIE_SECURE` | `0` | `1` si se sirve por HTTPS. |
 | `SBOE_TZ` | `Europe/Madrid` | Zona horaria de los horarios y las alertas diarias. |
 | `SBOE_MIN_DELAY` / `SBOE_MAX_DELAY` | `1s` / `3s` | Pausa aleatoria entre peticiones a las webs. |
-| `SBOE_SMTP_HOST` | — | Servidor SMTP (`smtp.gmail.com`). Vacío = los emails solo se escriben en el log. |
+| `SBOE_RESEND_API_KEY` | — | [API key de Resend](https://resend.com/api-keys). Si está definida se envía por Resend y se ignora SMTP. |
+| `SBOE_RESEND_FROM` | `onboarding@resend.dev` | Remitente, de un [dominio verificado](https://resend.com/domains) (`Alertas SBOE <alertas@tudominio.com>`). Con el valor por defecto Resend solo entrega a la cuenta dueña de la API key. |
+| `SBOE_SMTP_HOST` | — | Servidor SMTP (`smtp.gmail.com`), alternativa a Resend. Sin Resend ni SMTP los emails solo se escriben en el log. |
 | `SBOE_SMTP_PORT` | `587` | `587` (STARTTLS) o `465` (TLS). |
 | `SBOE_SMTP_USER` / `SBOE_SMTP_PASS` | — | Cuenta y [contraseña de aplicación](https://myaccount.google.com/apppasswords) de Gmail. |
 | `SBOE_SMTP_FROM` | `SBOE_SMTP_USER` | Remitente. |
@@ -153,22 +155,21 @@ docker run -d --name sboe -p 8080:8080 -v "$PWD/data:/data" --env-file .env -e S
 
 ### Portainer (en otro servidor)
 
-El stack `deploy/portainer-stack.yml` usa la imagen `sboe-go:latest` ya cargada en el servidor (no construye) y guarda
+El stack `deploy/portainer-stack.yml` usa la imagen `cue2g/boe:latest` de Docker Hub y guarda
 la base de datos en el volumen `sboe-data`.
 
 1. **Construir la imagen para la arquitectura del servidor** (`uname -m` en el servidor):
    ```sh
-   docker build -t sboe-go:latest .                                               # x86_64
-   docker buildx build --platform linux/arm64 -t sboe-go:latest --load .          # aarch64 (Raspberry Pi, etc.)
+   docker build -t cue2g/boe:latest .                                               # x86_64
+   docker buildx build --platform linux/arm64 -t cue2g/boe:latest --load .          # aarch64 (Raspberry Pi, etc.)
    ```
-2. **Llevarla al servidor**, una de dos:
+2. **Subirla a Docker Hub:**
    ```sh
-   docker save sboe-go:latest | ssh usuario@servidor docker load
+   docker push cue2g/boe:latest
    ```
-   o `docker save sboe-go:latest -o sboe-go.tar` y en Portainer *Images › Import* subir el `.tar`.
 3. En Portainer: *Stacks › Add stack*, nombre `sboe`, *Web editor*, y pegar el contenido de `deploy/portainer-stack.yml`.
 4. En *Environment variables* definir al menos `SBOE_BASE_URL` (p.ej. `http://IP-del-servidor:8080`) y las
-   `SBOE_SMTP_*`. Con *Load variables from .env file* puedes subir tu `.env`; `SBOE_DB_PATH` se ignora (el stack la fija).
+   `SBOE_RESEND_*` (o `SBOE_SMTP_*`). Con *Load variables from .env file* puedes subir tu `.env`; `SBOE_DB_PATH` se ignora (el stack la fija).
    `SBOE_PORT` cambia el puerto publicado (8080 por defecto).
 5. *Deploy the stack*.
 6. Crear el admin: *Containers › sboe › Console* (`/bin/sh`, *Connect*):
@@ -182,8 +183,8 @@ docker run --rm -v sboe-data:/data -v "$PWD":/src alpine sh -c 'cp /src/sboe.db 
 ```
 y vuelve a arrancar el stack.
 
-**Actualizar a una versión nueva:** repetir los pasos 1 y 2 y en el stack pulsar *Update the stack* (se recrea el
-contenedor con la imagen nueva; los datos del volumen se conservan).
+**Actualizar a una versión nueva:** repetir los pasos 1 y 2 y en el stack pulsar *Update the stack* activando
+*Re-pull image and redeploy* (se recrea el contenedor con la imagen nueva; los datos del volumen se conservan).
 
 ## Base de datos
 
@@ -298,7 +299,7 @@ internal/runner/          registro de jobs y Manager (un job a la vez, manual / 
 internal/scheduler/       cron de jobs según la tabla jobs + tick por minuto (alertas diarias)
 internal/filter/          criterios de filtro → SQL (los usan la web y las alertas)
 internal/alerts/          envío de alertas (al terminar un job y diarias) + plantilla del email
-internal/notify/          envío SMTP
+internal/notify/          envío de emails (Resend o SMTP)
 internal/auth/            contraseñas, sesiones, roles, CSRF
 internal/web/             handlers HTTP, plantillas html/template y estáticos (htmx, CSS) embebidos
 ```

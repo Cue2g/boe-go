@@ -1,4 +1,4 @@
-// Package notify envía emails (SMTP, p. ej. Gmail con contraseña de aplicación).
+// Package notify envía emails (API de Resend o SMTP, p. ej. Gmail con contraseña de aplicación).
 package notify
 
 import (
@@ -33,10 +33,24 @@ type SMTPConfig struct {
 	Port                   int // 587 = STARTTLS, 465 = TLS implícito
 }
 
-// New devuelve un SMTPMailer, o un LogMailer si no hay host configurado.
-func New(c SMTPConfig) Mailer {
+// Config elige el método de envío: Resend si hay API key, si no SMTP si hay host.
+type Config struct {
+	Resend ResendConfig
+	SMTP   SMTPConfig
+}
+
+// New devuelve un ResendMailer, un SMTPMailer o, si no hay nada configurado, un LogMailer.
+func New(cfg Config) Mailer {
+	if r := cfg.Resend; r.APIKey != "" {
+		if r.From == "" {
+			slog.Warn("SBOE_RESEND_FROM vacío: se usa onboarding@resend.dev (solo entrega a la cuenta dueña de la API key)")
+			r.From = "onboarding@resend.dev"
+		}
+		return newResend(r)
+	}
+	c := cfg.SMTP
 	if c.Host == "" || c.User == "" {
-		slog.Warn("SMTP no configurado: los emails solo se escribirán en el log")
+		slog.Warn("email no configurado (ni Resend ni SMTP): los emails solo se escribirán en el log")
 		return LogMailer{}
 	}
 	if c.From == "" {
@@ -132,6 +146,6 @@ func build(from string, m Message) []byte {
 type LogMailer struct{}
 
 func (LogMailer) Send(_ context.Context, m Message) error {
-	slog.Info("email (no enviado: SMTP sin configurar)", "to", m.To, "subject", m.Subject, "bytes", len(m.HTML))
+	slog.Info("email (no enviado: email sin configurar)", "to", m.To, "subject", m.Subject, "bytes", len(m.HTML))
 	return nil
 }

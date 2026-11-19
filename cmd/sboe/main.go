@@ -102,7 +102,7 @@ func runCmd(args []string) error {
 
 	var hook runner.FinishedFunc
 	if !*noAlerts {
-		hook = alerts.New(st, notify.New(cfg.SMTP), cfg.BaseURL, cfg.Location).OnRun
+		hook = alerts.New(st, notify.New(cfg.Mail), cfg.BaseURL, cfg.Location).OnRun
 	}
 	mgr := runner.NewManager(ctx, st, reg, hook)
 	slog.Info("ejecutando jobs", "jobs", strings.Join(names, ","), "db", cfg.DBPath)
@@ -136,7 +136,7 @@ func serveCmd(args []string) error {
 		slog.Warn("no hay usuarios: crea el primer admin con `sboe createuser -email ... -password ... -admin`")
 	}
 
-	alertSvc := alerts.New(st, notify.New(cfg.SMTP), cfg.BaseURL, cfg.Location)
+	alertSvc := alerts.New(st, notify.New(cfg.Mail), cfg.BaseURL, cfg.Location)
 	mgr := runner.NewManager(ctx, st, reg, alertSvc.OnRun)
 	sched := scheduler.New(ctx, st, mgr, cfg.Location, func(ctx context.Context, now time.Time) {
 		alertSvc.Daily(ctx, now)
