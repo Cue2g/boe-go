@@ -4,7 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"sort"
+	"strings"
 	"time"
+
+	"sboe/internal/normalize"
 )
 
 // AuctionRow es una subasta lista para mostrar (lectura de auctions_v).
@@ -122,4 +126,120 @@ func (s *Store) AuctionStats(ctx context.Context) (map[string]int, error) {
 		out[src] = n
 	}
 	return out, rows.Err()
+}
+
+// LocalityOption es una localidad con subastas activas, para sugerirla en el filtro.
+type LocalityOption struct {
+	Name     string
+	Province string
+	Count    int
+}
+
+// LocalityOptions lista las localidades de las subastas activas (agrupando mayúsculas y
+// tildes), de más a menos subastas. Se alimenta sola a medida que entran subastas.
+// Como nombre se queda con la grafía más cuidada (mayúsculas y minúsculas, tildes) y como
+// provincia la más repetida.
+func (s *Store) LocalityOptions(ctx context.Context) ([]LocalityOption, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT norm(locality), trim(locality), COALESCE(province,''), count(*)
+		FROM auctions WHERE active = 1 AND COALESCE(trim(locality),'') <> ''
+		GROUP BY 1, 2, 3`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	type agg struct {
+		LocalityOption
+		key       string
+		provCount map[string]int // subastas por provincia ("" = sin provincia)
+	}
+	byKey := map[string]*agg{}
+	for rows.Next() {
+		var key, name, prov string
+		var n int
+		if err := rows.Scan(&key, &name, &prov, &n); err != nil {
+			return nil, err
+		}
+		a := byKey[key]
+		if a == nil {
+			a = &agg{key: key, provCount: map[string]int{}}
+			a.Name = name
+			byKey[key] = a
+		}
+		a.Count += n
+		a.provCount[prov] += n
+		if prov != "" && a.provCount[prov] > a.provCount[a.Province] {
+			a.Province = prov
+		}
+		if nameScore(name) > nameScore(a.Name) {
+			a.Name = name
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// Catálogo fijo: siempre aparecen (aunque tengan 0 subastas) y suman todas sus grafías,
+	// pero solo las subastas de su provincia (La Granada, Barcelona ≠ Granada).
+	var all []*agg
+	for _, k := range normalize.KnownLocalities() {
+		prov := ""
+		if p, ok := normalize.ProvinceByCode(k.ProvinceCode); ok {
+			prov = p.Name
+		}
+		total := 0
+		for _, key := range k.Keys() {
+			a := byKey[key]
+			if a == nil {
+				continue
+			}
+			for _, pv := range []string{prov, ""} {
+				total += a.provCount[pv]
+				a.Count -= a.provCount[pv]
+				delete(a.provCount, pv)
+			}
+			if a.Count <= 0 {
+				delete(byKey, key)
+				continue
+			}
+			a.Province = ""
+			for pv, n := range a.provCount {
+				if n > a.provCount[a.Province] {
+					a.Province = pv
+				}
+			}
+		}
+		for _, name := range k.Names {
+			o := &agg{key: normalize.Text(name)}
+			o.Name, o.Province, o.Count = name, prov, total
+			all = append(all, o)
+		}
+	}
+	for _, a := range byKey {
+		all = append(all, a)
+	}
+	sort.Slice(all, func(i, j int) bool {
+		if all[i].Count != all[j].Count {
+			return all[i].Count > all[j].Count
+		}
+		return all[i].key < all[j].key
+	})
+	out := make([]LocalityOption, len(all))
+	for i, a := range all {
+		out[i] = a.LocalityOption
+	}
+	return out, nil
+}
+
+// nameScore puntúa una grafía: mejor con mayúsculas y minúsculas, y mejor con tildes.
+func nameScore(s string) int {
+	n := 0
+	if s != strings.ToUpper(s) && s != strings.ToLower(s) {
+		n += 2
+	}
+	for _, r := range s {
+		if r > 127 {
+			n++
+			break
+		}
+	}
+	return n
 }

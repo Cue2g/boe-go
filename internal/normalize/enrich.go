@@ -38,6 +38,17 @@ const (
 // a partir de los datos crudos de la fuente. Es idempotente.
 func Enrich(a *model.Auction, now time.Time) {
 	enrichProvince(a)
+	// Sin localidad: si la descripción nombra una localidad del catálogo, se usa esa.
+	if strings.TrimSpace(a.Locality) == "" {
+		if k, ok := KnownLocalityIn(a.Description, a.ProvinceCode); ok {
+			a.Locality = k.Names[0]
+			if a.ProvinceCode == "" {
+				if p, ok := ProvinceByCode(k.ProvinceCode); ok {
+					a.ProvinceCode, a.Province = p.Code, p.Name
+				}
+			}
+		}
+	}
 	a.StatusCode = StatusCode(a.Source, a.Status, a.StartDate, a.EndDate, now)
 	if a.AssetSubtype == "" {
 		a.AssetSubtype = AssetSubtype(a.AssetType, a.AssetTypeRaw, a.Description)

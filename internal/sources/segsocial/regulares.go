@@ -69,6 +69,11 @@ func BuildRegular(r Row) model.Auction {
 		a.AssetTypeRaw = parts[0]
 		a.AssetType = normalize.AssetType(parts[0])
 	}
+	// En inmuebles la razón es la dirección con el municipio entre paréntesis:
+	// "CL FONT DE LA VIA (RUBÍ)". En vehículos el paréntesis es la matrícula.
+	if a.AssetType == model.AssetInmueble {
+		a.Locality = normalize.LocalityFromAddress(a.Description)
+	}
 	if len(parts) > 1 {
 		a.Province = parts[1]
 	}

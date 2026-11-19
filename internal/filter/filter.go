@@ -142,8 +142,21 @@ func Build(c Criteria) (string, []any) {
 		}
 	}
 	if v := normalize.Text(c.Locality); v != "" {
-		add("norm(locality) LIKE ?", "%"+escapeLike(v)+"%")
-		conds[len(conds)-1] += ` ESCAPE '\'`
+		// lo escrito, tal cual…
+		cond := `norm(locality) LIKE ? ESCAPE '\'`
+		args := []any{"%" + escapeLike(v) + "%"}
+		if k, ok := normalize.LookupKnownLocality(c.Locality); ok {
+			// …y, si es una localidad del catálogo, cualquiera de sus nombres (Mahón = Maó),
+			// pero solo en su provincia (La Granada, Barcelona ≠ Granada)
+			var ors []string
+			for _, key := range k.Keys() {
+				ors = append(ors, `norm(locality) LIKE ? ESCAPE '\'`)
+				args = append(args, "%"+escapeLike(key)+"%")
+			}
+			args = append(args, k.ProvinceCode)
+			cond = "(" + cond + " OR ((" + strings.Join(ors, " OR ") + ") AND (province_code = ? OR province_code IS NULL)))"
+		}
+		add(cond, args...)
 	}
 	if m := rePublicID.FindStringSubmatch(c.Text); m != nil {
 		// búsqueda por ID público: SB-000123

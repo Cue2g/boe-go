@@ -62,7 +62,7 @@ const pageSize = 50
 
 // Version se muestra junto al logo. Se puede fijar al compilar con
 // -ldflags "-X sboe/internal/web.Version=1.1".
-var Version = "1.0"
+var Version = "1.0.1"
 
 // New construye el servidor.
 func New(d Deps) (*Server, error) {
@@ -357,6 +357,7 @@ type auctionsData struct {
 	SubtypeGroups any
 	StatusCodes   []string
 	Provinces     []provinceOpt
+	Localities    []store.LocalityOption
 	FilterID      int64
 	FilterName    string
 	View          string // "cards" o "table"
@@ -441,6 +442,15 @@ func (s *Server) auctions(w http.ResponseWriter, r *http.Request) {
 			d.Provinces[i].Top = true
 		}
 	}
+	locs, err := s.Store.LocalityOptions(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	for i := range locs {
+		locs[i].Name = normalize.DisplayName(locs[i].Name)
+	}
+	d.Localities = locs
 	p.D = d
 	s.render(w, "auctions", "layout", p)
 }
