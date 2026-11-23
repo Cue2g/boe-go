@@ -13,22 +13,20 @@
         <th style="padding:7px;border:1px solid #ddd">Fuente</th>
         <th style="padding:7px;border:1px solid #ddd">Bien</th>
         <th style="padding:7px;border:1px solid #ddd">Ubicación</th>
-        <th style="padding:7px;border:1px solid #ddd">Valor</th>
-        <th style="padding:7px;border:1px solid #ddd">Puja mín.</th>
-        <th style="padding:7px;border:1px solid #ddd">% recl.</th>
-        <th style="padding:7px;border:1px solid #ddd"></th>
+        <th style="padding:7px;border:1px solid #ddd">Fecha</th>
+        <th style="padding:7px;border:1px solid #ddd">Cantidad reclamada</th>
+        <th style="padding:7px;border:1px solid #ddd">% valor</th>
       </tr></thead>
       <tbody>
       {{range .Items}}
         <tr>
-          <td style="padding:7px;border:1px solid #ddd;white-space:nowrap">{{.PublicID}}</td>
+          <td style="padding:7px;border:1px solid #ddd;white-space:nowrap"><a href="{{.URL}}" style="color:#1a6fd1">{{.PublicID}}</a></td>
           <td style="padding:7px;border:1px solid #ddd">{{sourceLabel .Source}}</td>
           <td style="padding:7px;border:1px solid #ddd">{{subtypeLabel .AssetSubtype}}<div style="color:#777;font-size:11px">{{statusLabel .StatusCode}}</div></td>
           <td style="padding:7px;border:1px solid #ddd">{{.Locality}}{{if and .Locality .Province}} · {{end}}{{.Province}}</td>
-          <td style="padding:7px;border:1px solid #ddd;white-space:nowrap">{{euros .ValuationCents}}</td>
-          <td style="padding:7px;border:1px solid #ddd;white-space:nowrap">{{euros .MinBidCents}}</td>
-          <td style="padding:7px;border:1px solid #ddd">{{pct .PctClaimedValuation}}</td>
-          <td style="padding:7px;border:1px solid #ddd"><a href="{{.URL}}" style="color:#1a6fd1">Ver</a></td>
+          <td style="padding:7px;border:1px solid #ddd;white-space:nowrap">{{or .EndDate "—"}}</td>
+          <td style="padding:7px;border:1px solid #ddd;white-space:nowrap">{{euros .ClaimedCents}}</td>
+          <td style="padding:7px;border:1px solid #ddd;white-space:nowrap">{{pct .PctClaimedValuation}}</td>
         </tr>
       {{end}}
       </tbody>
